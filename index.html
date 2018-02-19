@@ -2,12 +2,701 @@
 <html>
 <script src="processing.js"></script>
 <script type="text/processing" data-processing-target="processing-canvas">
+PGraphics dataLinesCanvas;
+PGraphics axesCanvas;
+PGraphics tooltipCanvas;
+PGraphics boundingCanvas;
+PGraphics visibleLinesCanvas;
+
+int value = 0;
+DataSet dataSet;
+AllDataLines allDataLines;
+Axes axes;
+FlipButton[] buttons;
+FloatPair[] intersectedPoints;
+int openIndex;
+
+boolean boxEnabled;
+boolean drawBox;
+
+float startX = mouseX;
+float startY = mouseY;
+float boxW, boxH;
+
+DataLine[] boxLines;
+int boxIndex;
+
 void setup() {
-size(200, 200);
-background(100);
-stroke(255);
-ellipse(50, 50, 25, 25);
-println('hello web!');
+  size(1000, 800);
+  smooth(2);
+  surface.setResizable(true);
+  background(255);
+  String path = "car_data.csv";
+  dataSet = new DataSet(path);
+  buttons = new FlipButton[dataSet.attributeNames.length];
+  for (int i = 0; i < buttons.length; i++) {
+    buttons[i] = new FlipButton(0, 0);
+  }
+  axes = new Axes();
+  allDataLines = new AllDataLines();
+
+  intersectedPoints = new FloatPair[dataSet.data.length];
+  openIndex = 0;
+
+  boxEnabled = false;
+  drawBox = false;
+
+  boxLines = new DataLine[dataSet.data.length];
+  boxIndex = 0;
+}
+
+void draw() {
+  background(255);
+  dataLinesCanvas = createGraphics(width, height);
+  visibleLinesCanvas = createGraphics(width, height);
+  axesCanvas = createGraphics(width, height);
+  tooltipCanvas = createGraphics(width, height);
+  boundingCanvas = createGraphics(width, height);
+
+  allDataLines.drawLines();
+  axes.drawLines();
+  drawBoundingBox();
+
+  image(dataLinesCanvas, 0, 0);
+  image(visibleLinesCanvas, 0, 0);
+  image(axesCanvas, 0, 0);
+  image(tooltipCanvas, 0, 0);
+  image(boundingCanvas, 0, 0);
+}
+
+void mouseClicked() {
+  boolean lineSelected = false;
+  boolean buttonPressed = false;
+  for (LabelLine line : axes.lines) {
+    if (line.clickLine()) {
+      axes.updateSelectedCol(line.colName);
+      allDataLines.updateSelectedIndex(line.colName);
+      lineSelected = true;
+      boxEnabled = false;
+      boxLines = new DataLine[dataSet.data.length];
+      boxIndex = 0;
+    }
+  }
+  for (FlipButton btn : buttons) {
+    if (btn.buttonClicked()) {
+      btn.isFlipped = !btn.isFlipped;
+      buttonPressed = true;
+    }
+  }
+  if (!lineSelected && !buttonPressed && boxEnabled) {
+    boxEnabled = false;
+    boxLines = new DataLine[dataSet.data.length];
+    boxIndex = 0;
+  }
+}
+
+void mousePressed() {
+  startX = mouseX;
+  startY = mouseY;
+  if (!drawBox) {
+    drawBox = true;
+    boxEnabled = true;
+  }
+}
+
+void mouseReleased() {
+  // Undo previous selection
+  //boxLines = new DataLine[dataSet.data.length];
+  //boxIndex = 0;
+  float tlx, tly, brx, bry;
+  if (startX <= mouseX) {
+    tlx = startX;
+    brx = mouseX;
+  } else {
+    tlx = mouseX;
+    brx = startX;
+  }
+  if (startY <= mouseY) {
+    tly = startY;
+    bry = mouseY;
+  } else {
+    tly = mouseY;
+    bry = startY;
+  }
+  allDataLines.testBox(tlx, tly, brx, bry);
+  drawBox = false;
+}
+
+void drawBoundingBox() {
+    if (drawBox) {
+      boxW = Math.abs(mouseX - startX);
+      boxH = Math.abs(mouseY - startY);
+      if (mouseX <= startX) {
+        boxW *= -1;
+      }
+      if (mouseY <= startY) {
+        boxH *= -1;
+      }
+      pushStyle();
+      boundingCanvas.beginDraw();
+      boundingCanvas.rectMode(CORNER);
+      boundingCanvas.fill(128, 128);
+      boundingCanvas.rect(startX, startY, boxW, boxH);
+      boundingCanvas.endDraw();
+      popStyle();
+  }
+}
+
+int numIntersectionPoints() {
+  int count = 0;
+  for (int i = 0; i < intersectedPoints.length; i++) {
+    if (intersectedPoints[i] != null) {
+      count++;
+    }
+  }
+  return count;
+}
+
+boolean foundIntersect() {
+  return numIntersectionPoints() > 0;
+}
+
+String titleString(String s, int max) {
+  if (s.length() > max) {
+    s = s.substring(0, max-3);
+    s += "...";
+  }
+  return s;
+}
+
+boolean contains(FloatPair[] array, int value) {
+  for (int i = 0; i < array.length; i++) {
+    if (array[i] != null && array[i].id == value) {
+      return true;
+    }
+  }
+  return false;
+}
+
+boolean contains(DataLine[] array, DataLine line) {
+  for (int i = 0; i < array.length; i++) {
+    if (array[i] != null && array[i] == line) {
+      return true;
+    }
+  }
+  return false;
+}
+public class AllDataLines {
+
+  public DataLine[] dataLines;
+  private int selectedIndex;
+
+  public AllDataLines() {
+    this.selectedIndex = 0;
+    this.dataLines = new DataLine[dataSet.data.length];
+    for (int i = 0; i < dataLines.length; i++) {
+      dataLines[i] = new DataLine(dataSet.data[i].name, dataSet.data[i].values, this.selectedIndex, i+1);
+    }
+  }
+
+  public void drawLines() {
+    intersectedPoints = new FloatPair[dataSet.data.length];
+    openIndex = 0;
+    for (DataLine line : dataLines) {
+      line.testIntersection();
+    }
+    for (DataLine line : dataLines) {
+      line.drawLine();
+    }
+    if (foundIntersect()) {
+      drawToolTip();
+    }
+  }
+
+  private void drawToolTip() {
+    //float boxWidth = (width * 0.3)/(dataSet.attributeNames.length + 1) * 2;
+    float boxWidth = width * 0.25;
+    float boxHeight = textAscent() * (numIntersectionPoints() + 2);
+    pushStyle();
+    tooltipCanvas.beginDraw();
+    tooltipCanvas.rectMode(CORNER);
+    tooltipCanvas.textAlign(CENTER);
+    tooltipCanvas.fill(255);
+    tooltipCanvas.stroke(0);
+
+    float xCorner = (mouseX + boxWidth >= width) ? mouseX - boxWidth : mouseX;
+    float yCorner = (mouseY + boxHeight >= height) ? Math.max(mouseY - boxHeight, 0) : mouseY;
+    tooltipCanvas.rect(xCorner, yCorner, boxWidth, boxHeight);
+    tooltipCanvas.fill(0);
+    tooltipCanvas.textSize(width * 0.01);
+    tooltipCanvas.text(titleString(intersectedPoints[0].attributeA, 10), xCorner + boxWidth/4, yCorner + textAscent());
+    tooltipCanvas.text(titleString(dataSet.name, 10), xCorner + boxWidth/2, yCorner + textAscent());
+    tooltipCanvas.text(titleString(intersectedPoints[0].attributeB, 10), xCorner + 3*boxWidth/4, yCorner + textAscent());
+    float y = yCorner + 2 * textAscent();
+    for (int i = 0; i < openIndex; i++) {
+      FloatPair pair = intersectedPoints[i];
+      tooltipCanvas.text((int)pair.a, xCorner + boxWidth/4, y);
+      //tooltipCanvas.fill(pair.lineColor, 0, 255-pair.lineColor);
+      tooltipCanvas.fill(pair.lineColor, 0, 255-pair.lineColor);
+      tooltipCanvas.text(pair.name, xCorner + boxWidth/2, y);
+      tooltipCanvas.fill(0);
+      tooltipCanvas.text((int)pair.b, xCorner + 3*boxWidth/4, y);
+      y += textAscent();
+    }
+    tooltipCanvas.endDraw();
+    popStyle();
+  }
+
+  public void updateSelectedIndex(String colName) {
+    for (int i = 0; i < dataSet.attributeNames.length; i++) {
+      if (dataSet.attributeNames[i].equals(colName)) {
+        this.selectedIndex = i;
+        break;
+      }
+    }
+    for (int i = 0; i < dataLines.length; i++) {
+      dataLines[i] = new DataLine(dataSet.data[i].name, dataSet.data[i].values, this.selectedIndex, i+1);
+    }
+  }
+
+  public void testBox(float startX, float startY, float endX, float endY) {
+    for (DataLine line : dataLines) {
+      line.testBoxIntersect(startX, startY, endX, endY);
+    }
+  }
+
+}
+
+public class Axes {
+
+  public LabelLine[] lines;
+  private String selectedCol;
+
+  public Axes() {
+    this.lines = new LabelLine[dataSet.attributeNames.length];
+    this.selectedCol = dataSet.attributeNames[0];
+    createLines();
+  }
+
+  private void createLines() {
+    float canvasWidth = width * 0.9;
+    float xVertex = width * 0.1;
+    float yTop = height * 0.2;
+    float yBottom = height * 0.8;
+    float xSpacing = canvasWidth/(dataSet.attributeNames.length + 1);
+
+    for (int i = 0; i < dataSet.attributeNames.length; i++) {
+      buttons[i].updateLoc(xVertex, yBottom + height * 0.04);
+      lines[i] = new LabelLine(dataSet.attributeNames[i], xVertex, yTop, yBottom, dataSet.maxValues[i], dataSet.minValues[i], buttons[i].isFlipped, i);
+      xVertex += xSpacing;
+    }
+  }
+
+  public void drawLines() {
+    createLines();
+    for (LabelLine line : lines) {
+      line.drawLine(selectedCol);
+    }
+    for (FlipButton btn : buttons) {
+      btn.drawButton();
+    }
+  }
+
+  public void updateSelectedCol(String selectedCol) {
+    this.selectedCol = selectedCol;
+  }
+}
+
+public class DataLine {
+
+  private float[] values;
+  private DataPoint[] points;
+  private int selectedIndex;
+  private String name;
+  public int id;
+
+  public DataLine(String name, float[] values, int selectedIndex, int id) {
+    this.name = name;
+    this.values = values;
+    this.points = new DataPoint[this.values.length];
+    this.selectedIndex = selectedIndex;
+    this.id = id;
+    updatePoints();
+  }
+
+  private void updatePoints() {
+    float canvasWidth = width * 0.9;
+    float xVertex = width * 0.1;
+    float yTop = height * 0.2;
+    float yBottom = height * 0.8;
+    float xSpacing = canvasWidth/(dataSet.attributeNames.length + 1);
+    for (int i = 0; i < points.length; i++) {
+      float x = xVertex;
+      float y;
+      if (buttons[i].isFlipped) {
+        y = map(this.values[i], dataSet.minValues[i], dataSet.maxValues[i], yTop, yBottom);
+      } else {
+        y = map(this.values[i], dataSet.minValues[i], dataSet.maxValues[i], yBottom, yTop);
+      }
+      points[i] = new DataPoint(dataSet.attributeNames[i], x, y, this.values[i], name);
+      xVertex += xSpacing;
+    }
+  }
+
+  private float slope(DataPoint p1, DataPoint p2) {
+    return (p2.y - p1.y)/(p2.x - p1.x);
+  }
+
+  private float solveB(DataPoint p1, DataPoint p2) {
+    return p2.y - (slope(p1, p2) * p2.x);
+  }
+
+  private void intersection(DataPoint p1, DataPoint p2) {
+    float newY = slope(p1, p2) * mouseX + solveB(p1, p2);
+    float diff = Math.abs(mouseY - newY);
+    boolean betweenY;
+    if (p1.y > p2.y) {
+      betweenY = mouseY <= p1.y && mouseY >= p2.y;
+    } else if (p1.y < p2.y) {
+      betweenY = mouseY >= p1.y && mouseY <= p2.y;
+    } else {
+      betweenY = true;
+    }
+    if (diff <= 3 && mouseX >= p1.x && mouseX <= p2.x && betweenY) {
+      float c = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 0, 255);
+      //float r = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 229, 44);
+      //float g = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 245, 162);
+      //float b = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 249, 95);
+
+      FloatPair pair = new FloatPair(p1.origValue, p2.origValue, p1.name, p1.attribute, p2.attribute, c, id);
+      intersectedPoints[openIndex] = pair;
+      openIndex++;
+    }
+  }
+
+  public void testIntersection() {
+    for (int i = 0; i < points.length-1; i++) {
+      DataPoint p1 = points[i];
+      DataPoint p2 = points[i+1];
+      intersection(p1, p2);
+    }
+  }
+
+  public void drawLine() {
+    updatePoints();
+    pushStyle();
+    dataLinesCanvas.beginDraw();
+    visibleLinesCanvas.beginDraw();
+    float c = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 0, 255);
+    boolean isVisible = (contains(intersectedPoints, id) || openIndex == 0 || contains(boxLines, this)) && (contains(boxLines, this) || boxIndex == 0 || contains(intersectedPoints, id));
+    if (isVisible) {
+      dataLinesCanvas.stroke(c, 0, 255-c);
+    } else {
+      dataLinesCanvas.stroke(128);
+    }
+    visibleLinesCanvas.stroke(c, 0, 255-c);
+    dataLinesCanvas.stroke(128);
+    visibleLinesCanvas.strokeWeight(2);
+    dataLinesCanvas.strokeWeight(1.5);
+    for (int i = 0; i < points.length-1; i++) {
+      DataPoint p1 = points[i];
+      DataPoint p2 = points[i+1];
+      if (isVisible) {
+        visibleLinesCanvas.line(p1.x, p1.y, p2.x, p2.y);
+      } else {
+        dataLinesCanvas.line(p1.x, p1.y, p2.x, p2.y);
+      }
+    }
+    visibleLinesCanvas.endDraw();
+    dataLinesCanvas.endDraw();
+    popStyle();
+  }
+
+  public void testBoxIntersect(float startX, float startY, float endX, float endY) {
+    for (int i = 0; i < points.length-1; i++) {
+      DataPoint p1 = points[i];
+      DataPoint p2 = points[i+1];
+      if (boxIntersection(startX, startY, endX, endY, p1, p2) && !contains(boxLines, this)) {
+        boxLines[boxIndex] = this;
+        boxIndex++;
+        break;
+      }
+    }
+  }
+
+  private boolean boxIntersection(float startX, float startY, float endX, float endY, DataPoint p1,  DataPoint p2) {
+    int numIntersections = 0;
+
+    float m = slope(p1, p2);
+    float b = solveB(p1, p2);
+
+    float maxY = Math.max(p1.y, p2.y);
+    float minY = Math.min(p1.y, p2.y);
+
+    if (startX <= p1.x) {
+      startX = p1.x;
+    }
+    if (endX >= p2.x) {
+      endX = p2.x;
+    }
+    if (startY <= minY) {
+      startY = minY;
+    }
+    if (endY >= maxY) {
+      endY = maxY;
+    }
+    float y1 = startX * m + b;
+    float y2 = endX * m + b;
+
+    float x1 = solveX(startY, m, b);
+    float x2 = solveX(endY, m, b);
+
+    // Check to see if calculated x and y values are between x and y boundaries of box
+    //  and between x and y boundaries of axes
+    if (y1 >= startY && y1 <= endY && y1 >= minY && y1 <= maxY) {
+      numIntersections++;
+    }
+    if (y2 >= startY && y2 <= endY && y2 >= minY && y2 <= maxY) {
+      numIntersections++;
+    }
+    if (x1 >= startX && x1 <= endX && x1 >= p1.x && x1 <= p2.x) {
+      numIntersections++;
+    }
+    if (x2 >= startX && x2 <= endX && x2 >= p1.x && x2 <= p2.x) {
+      numIntersections++;
+    }
+
+    return numIntersections >= 2;
+  }
+
+  private float solveX(float y, float m, float b) {
+    return (y - b)/m;
+  }
+}
+
+public class DataPoint {
+
+  public float x, y;
+  public String attribute;
+  public float origValue;
+  public String name;
+
+  public DataPoint(String attribute, float x, float y, float origValue, String name) {
+    this.x = x;
+    this.y = y;
+    this.attribute = attribute;
+    this.origValue = origValue;
+    this.name = name;
+  }
+}
+
+public class DataSet {
+
+  public Entry[] data;
+  public String name;
+  public String[] attributeNames;
+  public float[] maxValues;
+  public float[] minValues;
+
+  public DataSet(String path) {
+    loadDataStrings(path);
+  }
+
+  private void loadDataStrings(String path) {
+    String[] lines = loadStrings(path);
+    String[] cols = split(lines[0], ",");
+    this.attributeNames = new String[cols.length-1];
+    this.name = cols[0];
+    for (int i = 1; i < cols.length; i++) {
+      this.attributeNames[i-1] = cols[i];
+    }
+    this.maxValues = new float[this.attributeNames.length];
+    this.minValues = new float[this.attributeNames.length];
+
+    for (int i = 0; i < this.maxValues.length; i++) {
+      this.maxValues[i] = Float.MIN_VALUE;
+      this.minValues[i] = Float.MAX_VALUE;
+    }
+    this.data = new Entry[lines.length-1];
+
+    for (int i = 1; i < lines.length; i++) {
+      String[] row = split(lines[i], ",");
+      Entry e = new Entry(this.attributeNames, row);
+      updateMaxMin(row);
+      this.data[i-1] = e;
+    }
+  }
+
+  private void updateMaxMin(String[] row) {
+    for (int i = 1; i < row.length; i++) {
+      float value = parseFloat(row[i]);
+      this.maxValues[i-1] = Math.max(this.maxValues[i-1], value);
+    }
+    for (int i = 1; i < row.length; i++) {
+      float value = parseFloat(row[i]);
+      this.minValues[i-1] = Math.min(this.minValues[i-1], value);
+    }
+  }
+
+}
+
+public class Entry {
+
+  public String name;
+  private String[] attributeNames;
+  public float[] values;
+
+  public Entry(String[] attributeNames, String[] values) {
+    this.name = values[0];
+    this.attributeNames = attributeNames;
+    this.values = new float[values.length-1];
+    for (int i = 1; i < values.length; i++) {
+      this.values[i-1] = parseFloat(values[i]);
+    }
+  }
+
+  public float getValue(String attribute) {
+    for (int i = 0; i < this.attributeNames.length; i++) {
+      if (attribute.equals(this.attributeNames[i])) {
+        return this.values[i];
+      }
+    }
+    return -1;
+  }
+}
+
+public class FlipButton {
+
+  private float x, y;
+  private float btnWidth;
+  private float btnHeight;
+  public boolean isFlipped;
+
+  public FlipButton(float x, float y) {
+    this.x = x;
+    this.y = y;
+    this.isFlipped = false;
+    updateSizes();
+  }
+
+  public void updateLoc(float x, float y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  private void updateSizes() {
+    this.btnWidth = Math.min(width * 0.08, (width * 0.9)/(dataSet.attributeNames.length + 1));
+    this.btnHeight = height * 0.04;
+  }
+
+  public boolean buttonClicked() {
+    return (
+    mouseX >= x - btnWidth/2 &&
+    mouseX <= x + btnWidth/2 &&
+    mouseY >= y - btnHeight/2 &&
+    mouseY <= y + btnHeight/2
+    );
+  }
+
+  public void drawButton() {
+    updateSizes();
+    pushStyle();
+    axesCanvas.beginDraw();
+    axesCanvas.rectMode(CENTER);
+    axesCanvas.textAlign(CENTER);
+    axesCanvas.fill(192);
+    axesCanvas.rect(x, y, btnWidth, btnHeight);
+    float textWidth = min(width * 0.015, btnHeight * 0.9);
+    axesCanvas.textSize(textWidth);
+    axesCanvas.fill(0);
+    axesCanvas.text("Flip", x, y + btnHeight/4);
+    axesCanvas.endDraw();
+    popStyle();
+  }
+
+
+}
+
+public class FloatPair {
+
+  public float a, b, lineColor;
+  public String name;
+  public String attributeA, attributeB;
+  public int id;
+
+  public FloatPair(float a, float b, String name, String attributeA, String attributeB, float lineColor, int id) {
+    this.a = a;
+    this.b = b;
+    this.lineColor = lineColor;
+    this.name = name;
+    this.attributeA = attributeA;
+    this.attributeB = attributeB;
+    this.id = id;
+  }
+}
+
+public class LabelLine {
+
+  public String colName;
+  public float xVertex, yVertex; // top coordinates of line
+  public float lineWidth;
+  public float lineHeight;
+  private float max;
+  private float min;
+  private boolean isFlipped;
+  private int id;
+
+  public LabelLine(String colName, float x, float y1, float y2, float max, float min, boolean isFlipped, int id) {
+    this.colName = colName;
+    this.xVertex = x;
+    this.yVertex = y1;
+    this.lineWidth = width * 0.002;
+    this.lineHeight = Math.abs(y1 - y2);
+    this.max = max;
+    this.min = min;
+    this.isFlipped = isFlipped;
+    this.id = id;
+  }
+
+  public void drawLine(String selectedCol) {
+    this.lineWidth = width * 0.002;
+    pushStyle();
+    axesCanvas.beginDraw();
+    axesCanvas.rectMode(CENTER);
+    axesCanvas.strokeWeight(this.lineWidth);
+    axesCanvas.fill(0);
+    axesCanvas.line(this.xVertex, this.yVertex, this.xVertex, this.yVertex + this.lineHeight);
+    if (selectedCol.equals(colName)) {
+      axesCanvas.fill(128, 0, 128, 200);
+    } else {
+      axesCanvas.fill(128, 200);
+    }
+    axesCanvas.strokeWeight(1);
+    axesCanvas.rect(this.xVertex, this.yVertex + this.lineHeight/2, this.lineWidth * 5, this.lineHeight);
+    axesCanvas.textAlign(CENTER);
+    axesCanvas.textSize(7);
+    axesCanvas.fill(0);
+
+    if (isFlipped) {
+      axesCanvas.text((int)this.min, this.xVertex, this.yVertex - height * 0.015);
+      axesCanvas.text((int)this.max, this.xVertex, this.yVertex + this.lineHeight + height * 0.015);
+    } else {
+      axesCanvas.text((int)this.max, this.xVertex, this.yVertex - height * 0.015);
+      axesCanvas.text((int)this.min, this.xVertex, this.yVertex + this.lineHeight + height * 0.015);
+    }
+    axesCanvas.text(titleString(this.colName, 20), this.xVertex, this.yVertex - height * 0.03);
+    axesCanvas.endDraw();
+    popStyle();
+  }
+
+  public boolean clickLine() {
+    return (
+    mouseX >= this.xVertex - 5 * lineWidth/2 &&
+    mouseX <= this.xVertex + 5 * lineWidth/2 &&
+    mouseY >= this.yVertex &&
+    mouseY <= this.yVertex + this.lineHeight
+    );
+  }
 }
 </script>
 <canvas id="processing-canvas"> </canvas>
