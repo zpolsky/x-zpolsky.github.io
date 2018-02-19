@@ -27,7 +27,7 @@ DataLine[] boxLines;
 int boxIndex;
 
 void setup() {
-  size(1000, 800);
+  size(500, 500);
   smooth(2);
   background(255);
   String path = "car_data.csv";
@@ -185,6 +185,7 @@ boolean contains(DataLine[] array, DataLine line) {
   }
   return false;
 }
+
 public class AllDataLines {
 
   public DataLine[] dataLines;
@@ -612,8 +613,6 @@ public class FlipButton {
     axesCanvas.endDraw();
     popStyle();
   }
-
-
 }
 
 public class FloatPair {
