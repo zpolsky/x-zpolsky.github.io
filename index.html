@@ -20,7 +20,7 @@
     AllDataLines allDataLines;
     Axes axes;
     FlipButton[] buttons;
-    FloatPair[] intersectedPoints;
+    DataPair[] intersectedPoints;
     int openIndex;
 
     boolean boxEnabled;
@@ -46,7 +46,7 @@
       axes = new Axes();
       allDataLines = new AllDataLines();
 
-      intersectedPoints = new FloatPair[dataSet.data.length];
+      intersectedPoints = new DataPair[dataSet.data.length];
       openIndex = 0;
 
       boxEnabled = false;
@@ -186,7 +186,7 @@
       return s;
     }
 
-    boolean hoverContains(FloatPair[] array, int value) {
+    boolean hoverContains(DataPair[] array, int value) {
       for (int i = 0; i < array.length; i++) {
         if (array[i] != null && array[i].id == value) {
           return true;
@@ -219,7 +219,7 @@
       }
 
       public void drawLines() {
-        intersectedPoints = new FloatPair[dataSet.data.length];
+        intersectedPoints = new DataPair[dataSet.data.length];
         openIndex = 0;
         for (DataLine line : dataLines) {
           line.testIntersection();
@@ -256,7 +256,7 @@
         tooltipCanvas.text(titleString(intersectedPoints[0].attributeB, 10), xCorner + 3*boxWidth/4, yCorner + textAscent());
         float y = yCorner + 2 * textAscent();
         for (int i = 0; i < openIndex; i++) {
-          FloatPair pair = intersectedPoints[i];
+          DataPair pair = intersectedPoints[i];
           tooltipCanvas.text((int)pair.a, xCorner + boxWidth/4, y);
           tooltipCanvas.fill(pair.lineColor, 0, 255-pair.lineColor);
           //tooltipCanvas.fill(pair.lineColorR, pair.lineColorG, pair.lineColorB);
@@ -434,8 +434,8 @@
           //float r = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 198, 8);
           //float g = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 219, 69);
           //float b = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 239, 148);
-          //FloatPair pair = new FloatPair(p1.origValue, p2.origValue, p1.name, p1.attribute, p2.attribute, r, g, b, id);
-          FloatPair pair = new FloatPair(p1.origValue, p2.origValue, p1.name, p1.attribute, p2.attribute, lineColor, id);
+          //DataPair pair = new DataPair(p1.origValue, p2.origValue, p1.name, p1.attribute, p2.attribute, r, g, b, id);
+          DataPair pair = new DataPair(p1.origValue, p2.origValue, p1.name, p1.attribute, p2.attribute, lineColor, id);
           intersectedPoints[openIndex] = pair;
           openIndex++;
         }
@@ -681,15 +681,15 @@
       }
     }
 
-    // FloatPair
-    public class FloatPair {
+    // DataPair
+    public class DataPair {
       public float a, b;
       public float lineColor;
       public String name;
       public String attributeA, attributeB;
       public int id;
 
-      public FloatPair(float a, float b, String name, String attributeA, String attributeB, float lineColor, int id) {
+      public DataPair(float a, float b, String name, String attributeA, String attributeB, float lineColor, int id) {
         this.a = a;
         this.b = b;
         this.lineColor = lineColor;
