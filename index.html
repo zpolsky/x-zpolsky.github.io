@@ -429,12 +429,7 @@
           betweenY = true;
         }
         if (diff <= 5 && mouseX >= p1.x && mouseX <= p2.x && betweenY) {
-        //if (diff <= 3 && mouseX >= p1.x && mouseX <= p2.x && betweenY) {
           lineColor = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 0, 255);
-          //float r = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 198, 8);
-          //float g = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 219, 69);
-          //float b = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 239, 148);
-          //DataPair pair = new DataPair(p1.origValue, p2.origValue, p1.name, p1.attribute, p2.attribute, r, g, b, id);
           DataPair pair = new DataPair(p1.origValue, p2.origValue, p1.name, p1.attribute, p2.attribute, lineColor, id);
           intersectedPoints[openIndex] = pair;
           openIndex++;
@@ -454,11 +449,7 @@
         pushStyle();
         dataLinesCanvas.beginDraw();
         visibleLinesCanvas.beginDraw();
-        lineColor = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 0, 255);
-        //float r = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 198, 8);
-        //float g = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 219, 69);
-        //float b = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 239, 148);
-        //boolean isVisible = (contains(intersectedPoints, id) || openIndex == 0 || contains(boxLines, this.id)) && (contains(boxLines, this.id) || boxIndex == 0 || contains(intersectedPoints, id));
+        lineColor = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 0, 255);  
         boolean isVisible = (hoverContains(intersectedPoints, id) || boxContains(boxLines, id)) || (openIndex == 0 && boxIndex == 0);
         visibleLinesCanvas.stroke(lineColor, 0, 255-lineColor);
         dataLinesCanvas.stroke(128);
