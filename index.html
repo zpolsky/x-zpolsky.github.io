@@ -571,8 +571,8 @@
         for (int i = 0; i < this.maxValues.length; i++) {
           // this.maxValues[i] = Float.MIN_VALUE;
           // this.minValues[i] = Float.MAX_VALUE;
-          this.maxValues[i] = -10000000;
-          this.minValues[i] = 10000000;
+          this.maxValues[i] = -2147483648;
+          this.minValues[i] = 2147483647;
         }
         this.data = new Entry[lines.length-1];
 
