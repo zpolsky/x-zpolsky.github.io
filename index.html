@@ -449,7 +449,7 @@
         pushStyle();
         dataLinesCanvas.beginDraw();
         visibleLinesCanvas.beginDraw();
-        lineColor = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 0, 255);  
+        lineColor = map(this.values[selectedIndex], dataSet.minValues[selectedIndex], dataSet.maxValues[selectedIndex], 0, 255);
         boolean isVisible = (hoverContains(intersectedPoints, id) || boxContains(boxLines, id)) || (openIndex == 0 && boxIndex == 0);
         visibleLinesCanvas.stroke(lineColor, 0, 255-lineColor);
         dataLinesCanvas.stroke(128);
@@ -569,10 +569,8 @@
         this.minValues = new float[this.attributeNames.length];
 
         for (int i = 0; i < this.maxValues.length; i++) {
-          // this.maxValues[i] = Float.MIN_VALUE;
-          // this.minValues[i] = Float.MAX_VALUE;
-          this.maxValues[i] = -10000000;
-          this.minValues[i] = 10000000;
+          this.maxValues[i] = Float.MIN_VALUE;
+          this.minValues[i] = Float.MAX_VALUE;
         }
         this.data = new Entry[lines.length-1];
 
