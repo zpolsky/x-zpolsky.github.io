@@ -72,10 +72,9 @@ function pickColor(d, isVotes) {
 }
 
 function pickTextColor(d) {
-  if (d.D_Percentage === d.R_Percentage) {
-    return "black"
+  if (d.R_Percentage === d.D_Percentage && d.R_Percentage + d.D_Percentage <= 100) {
+    return 'black';
   } else {
-    // return pickColor(d);
     return pickColor(d, voteBased);
   }
 }
@@ -102,8 +101,13 @@ function getVoteData(d) {
 }
 
 function winnerLoserData(voteData) {
-  const { dVotes, rVotes, dCand, rCand, dPercent, rPercent } = voteData;
+  let { dVotes, rVotes, dCand, rCand, dPercent, rPercent } = voteData;
   let winData, loseData;
+  //FIXME - used to recalculate percents if they are incorrect --> find out if needed
+  // if (dPercent + rPercent > 100) {
+  //   dPercent = Math.round(dVotes/(dVotes + rVotes) * 1000)/10.0;
+  //   rPercent = Math.round(rVotes/(dVotes + rVotes) * 1000)/10.0;
+  // }
   if (voteBased) {
     if (dVotes > rVotes) {
       winData = {
@@ -223,6 +227,8 @@ function updateMap(data, year) {
 
   let boxWidth = w * 0.065;
 
+  let validStates = [];
+
   // Convert text to numbers (some text results in NaN, so convert back if this occurs)
   data.forEach(d => {
     const { D_Votes, R_Votes } = d;
@@ -235,7 +241,13 @@ function updateMap(data, year) {
       d.D_Votes = +removeCommas(D_Votes);
       d.R_Votes = +removeCommas(R_Votes);
     }
+    const { i, j } = getStateLoc(d);
+    if (i !== -1 && j !== -1) {
+      validStates.push(d);
+    }
   });
+
+  data = validStates;
 
   stateBoxes.selectAll("rect")
         .data(data)
@@ -254,7 +266,6 @@ function updateMap(data, year) {
         .attr("stroke", "black")
         .attr("stroke-width", 0.5)
         .style("fill", d => {
-          // return pickColor(d);
           return pickColor(d, voteBased);
         })
         // Adapted from http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
