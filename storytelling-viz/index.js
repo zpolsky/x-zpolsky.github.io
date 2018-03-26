@@ -187,6 +187,7 @@ function createMap(year, allYears) {
 
     svg.selectAll('circle')
       .data(() => {
+        let data;
         if (groupYears.includes(year)) {
           const allData = [];
           for (let i = 0; i < allYears.length - extraButtons; i++) {
@@ -197,10 +198,14 @@ function createMap(year, allYears) {
               });
             }
           };
-          return allData;
+          data = allData;
         } else {
-          return dataByYear[year];
+          data = dataByYear[year];
         }
+        // forces smaller circles on top of larger ones so that all circles can be selected
+        return data.sort((a, b) => {
+          return a.Total_Victims < b.Total_Victims;
+        })
       })
       .enter()
       .append('circle')
@@ -240,6 +245,7 @@ function createMap(year, allYears) {
           <h5><b>${d.Title} (${(new Date(d.Date)).getFullYear()})</b></h5>
           <p><b>Location</b>: ${d.Location}</p>
           <p><b>Date</b>: ${d.Date}</p>
+          <p><b>Cause</b>: ${d.Cause}</p>
           <p><b>Summary</b>: ${d.Summary}</p>
           <span><b>Total Victims</b>: ${d.Total_Victims}</span>
           <ul>
@@ -289,6 +295,38 @@ function createPieChart(year, pieDiv, allYears, svg) {
   const pie = d3.pie()
     .sort(null)
     .value(d => { return d.value; });
+
+    // let causeData = {};
+    // if (groupYears.includes(year)) {
+    //   for (let i = 0; i < allYears.length - extraButtons; i++) {
+    //     const currentYear = allYears[i];
+    //     if (checkDecade(year, currentYear)) {
+    //       dataByYear[currentYear].forEach(d => {
+    //         causeData[d.Cause] = (causeData[d.Cause]) ? causeData[d.Cause] + 1 : 1;
+    //       });
+    //     }
+    //   }
+    // } else {
+    //   dataByYear[year].forEach(d => {
+    //     causeData[d.Cause] = (causeData[d.Cause]) ? causeData[d.Cause] + 1 : 1;
+    //   });
+    // }
+    // console.log('causeData = ', causeData);
+    // let healthArray = [];
+    // for (let prop in causeData) {
+    //   let color;
+    //   switch(prop) {
+    //     case 'Yes': color = rgb(200, 0, 0); break;
+    //     case 'No': color = rgb(46, 92, 155); break;
+    //     case 'Unclear': color = rgb(198, 104, 21); break;
+    //     default: color = rgb(43, 165, 63);
+    //   }
+    //   healthArray.push({
+    //     name: prop,
+    //     color,
+    //     value: causeData[prop]
+    //   });
+    // }
 
   let healthData = {
     Yes: 0,
@@ -490,22 +528,6 @@ function loadYear(year, allYears) {
       });
   });
 
-  // buttonDiv.selectAll('button')
-  //   .data(allYears)
-  //   .enter()
-  //   .append('button')
-  //   .attr('type', 'button')
-  //   .attr('class', d => {
-  //     return (d === year) ? 'btn btn-danger' : 'btn btn-primary';
-  //   })
-  //   .style('margin', '0.2%')
-  //   .on('click', d => {
-  //     loadYear(d, allYears);
-  //   })
-  //   .text(d => {
-  //     return getYearText(d);
-  //   });
-
   createMap(year, allYears);
 }
 
@@ -537,13 +559,22 @@ function fixData(data) {
     if (d.Mental_Health_Issues === 'unknown') {
       d.Mental_Health_Issues = 'Unknown';
     }
+    if (d.Cause) {
+      d.Cause = d.Cause.charAt(0).toUpperCase() + d.Cause.substring(1, d.Cause.length);
+      switch(d.Cause) {
+        case 'Domestic disputer': d.Cause = 'Domestic dispute'; break;
+        case 'Unemployement': d.Cause = 'Unemployment'; break;
+        case 'Suspension': d.Cause = 'Unemployment'; break;
+        case 'Breakup': d.Cause = 'Anger';
+      }
+    }
     if (!d.Employed) {
       d.Employed = 'Unknown';
     } else {
       d.Employed = (d.Employed === 1) ? 'Yes' : 'No';
     }
     for (let prop in d) {
-      if (!d[prop]) {
+      if (d[prop] === '') {
         d[prop] = 'Unknown';
       }
     }
