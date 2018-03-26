@@ -218,7 +218,6 @@ function createMap(year, allYears) {
           default: return rgb(32, 32, 32);
         }
       })
-      // .style('fill', rgb(32, 32, 32))
       .style('opacity', 0.75)
       .on('mouseover', d => {
         tooltip.transition()
@@ -259,11 +258,11 @@ function createMap(year, allYears) {
         .style('opacity', 1);
         pieDiv.style('opacity', 0);
       });
-      createPieChart(year, pieDiv, allYears);
+      createPieChart(year, pieDiv, allYears, svg);
   });
 }
 
-function createPieChart(year, pieDiv, allYears) {
+function createPieChart(year, pieDiv, allYears, svg) {
   // Adapted from https://bl.ocks.org/mbostock/3887193
   const pieWidth = 500;
   const pieHeight = 500;
@@ -326,7 +325,7 @@ function createPieChart(year, pieDiv, allYears) {
     });
   }
 
-  createLegend(healthArray, pieDiv);
+  createLegend(healthArray, pieDiv, svg);
 
   let i = healthArray.length;
   while (i--) {
@@ -370,11 +369,10 @@ function createPieChart(year, pieDiv, allYears) {
     });
 }
 
-function createLegend(healthArray, pieDiv) {
+function createLegend(healthArray, pieDiv, svg) {
   let legend = pieDiv.append('svg')
     .attr('class', 'pieLegend')
     .style('opacity', 1)
-    // .style('left', '50px')
     .style('top', '390px');
 
   let boxSize = 25;
@@ -397,14 +395,67 @@ function createLegend(healthArray, pieDiv) {
       })
       .text(d.name);
 
-    yBox += 2 * boxSize;
+    yBox += 1.5 * boxSize;
   });
 
   pieDiv.append('h4')
-    .html(`Legend`)
+    .html(`Health Legend`)
     .style('position', 'absolute')
     .style('top', '375px')
-    .style('left', '95px');
+    .style('left', '85px');
+
+  svg.append('h4')
+    .html('Map Legend')
+    .style('position', 'absolute')
+    .style('top', '200px')
+
+  let mapLegend = svg.append('svg')
+    .attr('class', 'pieLegend')
+    .style('opacity', 1)
+    .style('top', '390px');
+
+  let colorsLegend = [
+    {
+      name: 'Male',
+      color: rgb(6, 55, 135)
+    },
+    {
+      name: 'Female',
+      color: rgb(155, 0, 150)
+    },
+    {
+      name: 'Other/Unknown',
+      color: rgb(32, 32, 32)
+    }
+  ];
+
+  mapLegend.append('text')
+    .attr('x', 25)
+    .attr('y', 50)
+    .style('font-size', '18px')
+    .text('Map Legend')
+
+
+  yBox = 70;
+  colorsLegend.forEach(d => {
+    mapLegend.append('rect')
+    .attr('x', 15)
+    .attr('y', yBox)
+    .attr('width', boxSize)
+    .attr('height', boxSize)
+    .attr('stroke', 'black')
+    .attr('stroke-width', 0.5)
+    .style('fill', d.color);
+
+    mapLegend.append('text')
+      .attr('x', 50)
+      .attr('y', () => {
+        return yBox + boxSize * 0.75;
+      })
+      .text(d.name);
+
+    yBox += 1.5 * boxSize;
+  });
 }
 
 function loadYear(year, allYears) {
@@ -424,14 +475,7 @@ function loadYear(year, allYears) {
     .append('button')
     .attr('type', 'button')
     .attr('class', d => {
-      if (d === year) {
-        return 'btn btn-danger';
-      } else if (groupYears.includes(d)) {
-        return 'btn btn-primary';
-      } else {
-        return 'btn btn-primary';
-      }
-      // return (d === year) ? 'btn btn-danger' : 'btn btn-primary';
+      return (d === year) ? 'btn btn-danger' : 'btn btn-primary';
     })
     .style('margin', '0.2%')
     .on('click', d => {
@@ -441,34 +485,6 @@ function loadYear(year, allYears) {
       return getYearText(d);
     });
 
-  // for (let i = 0; i < allYears.length; i++) {
-  //   const d = allYears[i];
-  //   if (d === 1971 || d === 1982 || d === 1990 || d === 2000 || d === 2010) {
-  //     buttonDiv.append('br');
-  //   } else if (d === -1) {
-  //     buttonDiv.append('br');
-  //     buttonDiv.append('br');
-  //   }
-  //   buttonDiv.append('button')
-  //     .attr('type', 'button')
-  //     .attr('class', () => {
-  //       if (d === year) {
-  //         return 'btn btn-danger';
-  //       } else if (groupYears.includes(d)) {
-  //         return 'btn btn-primary';
-  //       } else {
-  //         return 'btn btn-primary';
-  //       }
-  //       // return (d === year) ? 'btn btn-danger' : 'btn btn-primary';
-  //     })
-  //     .style('margin', '0.2%')
-  //     .on('click', () => {
-  //       loadYear(d, allYears);
-  //     })
-  //     .text(() => {
-  //       return getYearText(d);
-  //     });
-  // }
   createMap(year, allYears);
 }
 
