@@ -136,7 +136,9 @@ function createMap(year, allYears) {
       .style('fill', d => {
         const value = d.properties.shootings;
         if (value) {
-          return rgb(200, 0, 0)
+          // return rgb(200, 0, 0)
+          // return rgb(247, 209, 74); // yellow
+          return rgb(247, 189, 74); // orange
         } else {
           return rgb(213, 222, 217);
         }
@@ -262,8 +264,8 @@ function createMap(year, allYears) {
   });
 }
 
+// Adapted from https://bl.ocks.org/mbostock/3887193
 function createPieChart(year, pieDiv, allYears, svg) {
-  // Adapted from https://bl.ocks.org/mbostock/3887193
   const pieWidth = 500;
   const pieHeight = 500;
   const radius = Math.min(pieWidth, pieHeight)/2;
@@ -469,21 +471,40 @@ function loadYear(year, allYears) {
 
   let buttonDiv = d3.select('#viz').append('div').attr('id', 'buttonDiv');
 
-  buttonDiv.selectAll('button')
-    .data(allYears)
-    .enter()
-    .append('button')
-    .attr('type', 'button')
-    .attr('class', d => {
-      return (d === year) ? 'btn btn-danger' : 'btn btn-primary';
-    })
-    .style('margin', '0.2%')
-    .on('click', d => {
-      loadYear(d, allYears);
-    })
-    .text(d => {
-      return getYearText(d);
-    });
+  allYears.forEach(d => {
+    if (d === -1) {
+      buttonDiv.append('br');
+      buttonDiv.append('br');
+    }
+    buttonDiv.append('button')
+      .attr('type', 'button')
+      .attr('class', () => {
+        return (d === year) ? 'btn btn-danger' : 'btn btn-primary';
+      })
+      .style('margin', '0.2%')
+      .on('click', () => {
+        loadYear(d, allYears);
+      })
+      .text(() => {
+        return getYearText(d);
+      });
+  });
+
+  // buttonDiv.selectAll('button')
+  //   .data(allYears)
+  //   .enter()
+  //   .append('button')
+  //   .attr('type', 'button')
+  //   .attr('class', d => {
+  //     return (d === year) ? 'btn btn-danger' : 'btn btn-primary';
+  //   })
+  //   .style('margin', '0.2%')
+  //   .on('click', d => {
+  //     loadYear(d, allYears);
+  //   })
+  //   .text(d => {
+  //     return getYearText(d);
+  //   });
 
   createMap(year, allYears);
 }
@@ -507,6 +528,7 @@ function fixData(data) {
     d.Policeman_Killed = +d.Policeman_Killed;
     d.Injured = +d.Injured;
     d.Total_Victims = d.Fatalities + d.Policeman_Killed + d.Injured;
+    d.Employed = +d.Employed;
     if (d.Gender === 'Male') {
       d.Gender = 'M';
     } else if (d.Gender == 'Female') {
@@ -515,13 +537,15 @@ function fixData(data) {
     if (d.Mental_Health_Issues === 'unknown') {
       d.Mental_Health_Issues = 'Unknown';
     }
-    if (!d.Age) {
-      d.Age = 'Unknown';
-    }
     if (!d.Employed) {
       d.Employed = 'Unknown';
     } else {
       d.Employed = (d.Employed === 1) ? 'Yes' : 'No';
+    }
+    for (let prop in d) {
+      if (!d[prop]) {
+        d[prop] = 'Unknown';
+      }
     }
   });
 }
