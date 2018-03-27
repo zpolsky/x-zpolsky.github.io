@@ -80,7 +80,7 @@ function createMap(year, allYears) {
         .attr('class', 'summaryBox')
         .style('opacity', 0)
         .style('left', '1000px')
-        .style('top', '1300px');
+        .style('top', '1550px');
 
   let pieDiv = d3.select('#viz')
         .append('div')
@@ -158,7 +158,7 @@ function createMap(year, allYears) {
             stateInjured += shooting.Injured;
           });
 
-          pieDiv.style('opacity', 0);
+          pieDiv.style('opacity', 1);
 
           summaryBox.html(() => {
             let text = `
@@ -173,9 +173,16 @@ function createMap(year, allYears) {
             <span><b>Shootings</b>:</span>
             <ul>
             `;
-            shootings.forEach(shooting => {
-              text += `<li><em>${shooting.Title} (${(new Date(shooting.Date)).getFullYear()})</em></li>`
-            });
+            let tooMany = false;
+            for (let i = 0; i < shootings.length; i++) {
+              if (i < 15) {
+                const shooting = shootings[i];
+                text += `<li><em>${shooting.Title} (${(new Date(shooting.Date)).getFullYear()})</em></li>`
+              } else if (!tooMany) {
+                text += `<li><em>(${shootings.length - 15} more)</em></li>`
+                tooMany = true;
+              }
+            }
             text += '</ul>';
             return text;
           })
@@ -240,13 +247,17 @@ function createMap(year, allYears) {
           .style('opacity', 0);
       })
       .on('click', d => {
+        let summary = d.Summary;
+        if (summary.length > 400) {
+          summary = summary.substring(0, 400) + '...';
+        }
         summaryBox.html(
           `
           <h5><b>${d.Title} (${(new Date(d.Date)).getFullYear()})</b></h5>
           <p><b>Location</b>: ${d.Location}</p>
           <p><b>Date</b>: ${d.Date}</p>
           <p><b>Cause</b>: ${d.Cause}</p>
-          <p><b>Summary</b>: ${d.Summary}</p>
+          <p><b>Summary</b>: ${summary}</p>
           <span><b>Total Victims</b>: ${d.Total_Victims}</span>
           <ul>
             <li>Fatalities: ${d.Fatalities}</li>
@@ -264,7 +275,7 @@ function createMap(year, allYears) {
           `
         )
         .style('opacity', 1);
-        pieDiv.style('opacity', 0);
+        pieDiv.style('opacity', 1);
       });
       createPieChart(year, pieDiv, allYears, svg);
   });
@@ -276,17 +287,17 @@ function createPieChart(year, pieDiv, allYears, svg) {
   const pieHeight = 500;
   const radius = Math.min(pieWidth, pieHeight)/2;
 
-  pieDiv.append('h3')
+  pieDiv.append('h4')
     .html(`Mental Health Summary: ${getYearText(year)}`)
     .style('position', 'absolute')
-    .style('top', '50px')
-    .style('left', '-50px')
+    // .style('top', '60px')
+    .style('left', '0px')
 
   let pieSVG = pieDiv.append('svg')
     .attr('width', pieWidth)
-    .attr('height', pieWidth)
+    .attr('height', 300)
     .append('g')
-    .attr('transform', `translate(${pieWidth/4}, ${pieHeight/2})`);
+    .attr('transform', `translate(${pieWidth/4}, ${pieHeight/3})`);
 
   const arc = d3.arc()
     .outerRadius(radius/2)
@@ -295,38 +306,6 @@ function createPieChart(year, pieDiv, allYears, svg) {
   const pie = d3.pie()
     .sort(null)
     .value(d => { return d.value; });
-
-    // let causeData = {};
-    // if (groupYears.includes(year)) {
-    //   for (let i = 0; i < allYears.length - extraButtons; i++) {
-    //     const currentYear = allYears[i];
-    //     if (checkDecade(year, currentYear)) {
-    //       dataByYear[currentYear].forEach(d => {
-    //         causeData[d.Cause] = (causeData[d.Cause]) ? causeData[d.Cause] + 1 : 1;
-    //       });
-    //     }
-    //   }
-    // } else {
-    //   dataByYear[year].forEach(d => {
-    //     causeData[d.Cause] = (causeData[d.Cause]) ? causeData[d.Cause] + 1 : 1;
-    //   });
-    // }
-    // console.log('causeData = ', causeData);
-    // let healthArray = [];
-    // for (let prop in causeData) {
-    //   let color;
-    //   switch(prop) {
-    //     case 'Yes': color = rgb(200, 0, 0); break;
-    //     case 'No': color = rgb(46, 92, 155); break;
-    //     case 'Unclear': color = rgb(198, 104, 21); break;
-    //     default: color = rgb(43, 165, 63);
-    //   }
-    //   healthArray.push({
-    //     name: prop,
-    //     color,
-    //     value: causeData[prop]
-    //   });
-    // }
 
   let healthData = {
     Yes: 0,
@@ -359,6 +338,7 @@ function createPieChart(year, pieDiv, allYears, svg) {
       default: color = rgb(43, 165, 63);
     }
     healthArray.push({
+      x: -35,
       name: prop,
       color,
       value: healthData[prop]
@@ -373,8 +353,29 @@ function createPieChart(year, pieDiv, allYears, svg) {
       healthArray.splice(i, 1);
     }
   }
+  let y = -30;
+  healthArray.forEach(d => {
+    d.y = y;
+    y += 20;
+  })
 
   let dy = -4;
+
+  pieSVG.selectAll('rect').data(healthArray).enter()
+    .append('rect')
+    .attr('x', d => {
+      return d.x;
+    })
+    .attr('y', d => {
+      return d.y;
+    })
+    .attr('width', 10)
+    .attr('height', 10)
+    .attr('stroke', 'black')
+    .attr('stroke-width', 0.5)
+    .style('fill', d => {
+      return d.color;
+    });
 
   let g = pieSVG.selectAll('.arc')
       .data(pie(healthArray))
@@ -390,6 +391,10 @@ function createPieChart(year, pieDiv, allYears, svg) {
 
   // Center text
   g.append('text')
+    .style('text-anchor', 'start')
+    .attr('x', d => {
+      return -18;
+    })
     .attr('dy', d => {
       dy += 2;
       return dy + 'em';
@@ -410,44 +415,8 @@ function createPieChart(year, pieDiv, allYears, svg) {
 }
 
 function createLegend(healthArray, pieDiv, svg) {
-  let legend = pieDiv.append('svg')
-    .attr('class', 'pieLegend')
-    .style('opacity', 1)
-    .style('top', '390px');
-
   let boxSize = 25;
   let yBox = boxSize;
-
-  healthArray.forEach(d => {
-    legend.append('rect')
-    .attr('x', 25)
-    .attr('y', yBox)
-    .attr('width', boxSize)
-    .attr('height', boxSize)
-    .attr('stroke', 'black')
-    .attr('stroke-width', 0.5)
-    .style('fill', d.color);
-
-    legend.append('text')
-      .attr('x', 60)
-      .attr('y', () => {
-        return yBox + boxSize * 0.75;
-      })
-      .text(d.name);
-
-    yBox += 1.5 * boxSize;
-  });
-
-  pieDiv.append('h4')
-    .html(`Mental Health Legend`)
-    .style('position', 'absolute')
-    .style('top', '375px')
-    .style('left', '55px');
-
-  svg.append('h4')
-    .html('Map Legend')
-    .style('position', 'absolute')
-    .style('top', '200px')
 
   let mapLegend = svg.append('svg')
     .attr('class', 'pieLegend')
@@ -475,7 +444,6 @@ function createLegend(healthArray, pieDiv, svg) {
     .style('font-size', '16px')
     .text('Shooter Gender Legend')
 
-
   yBox = 70;
   colorsLegend.forEach(d => {
     mapLegend.append('rect')
@@ -495,6 +463,89 @@ function createLegend(healthArray, pieDiv, svg) {
       .text(d.name);
 
     yBox += 1.5 * boxSize;
+  });
+
+  let circleLegend = svg.append('svg')
+    .attr('class', 'pieLegend')
+    .style('opacity', 1)
+    .style('top', '390px');
+
+  circleLegend.append('text')
+    .attr('x', 0)
+    .attr('y', 220)
+    .style('font-size', '16px')
+    .text('Victims Legend')
+
+  const circleRadius = [10, 100, 200, 400].reverse();
+  const circles = circleRadius.map(radius => {
+    let color;
+    switch (radius) {
+      case 400: color = rgb(215,25,28); break;
+      case 200: color = rgb(253,174,97); break;
+      case 100: color = rgb(171,217,233); break;
+      default: color = rgb(44,123,182); break;
+    }
+    return {
+      radius,
+      color
+    }
+  });
+
+  let xCenter = 35;
+  let yCenter = 270;
+
+  circleLegend.selectAll('circle').data(circles).enter().append('circle')
+    .attr('cx', d => {
+      return xCenter;
+    })
+    .attr('cy', d => {
+      return yCenter;
+    })
+    .attr('r', d => {
+      return Math.sqrt(d.radius) * 1.5;
+    })
+    .style('fill', d => {
+      return d.color;
+    })
+    .style('opacity', 0.8);
+
+  yCenter = 280;
+  circleLegend.selectAll('rect').data(circles).enter().append('rect')
+    .attr('x', d => {
+      return xCenter - 20;
+    })
+    .attr('y', d => {
+      yCenter += boxSize * 1.5;
+      return yCenter;
+    })
+    .attr('width', d => {
+      return boxSize;
+    })
+    .attr('height', d => {
+      return boxSize;
+    })
+    .style('fill', d => {
+      return d.color;
+    })
+    .attr('stroke', 'black')
+    .attr('stroke-width', 0.5);
+
+  dy = 6;
+  yCenter = 290;
+  circleLegend.append('g').selectAll('text').data(circles).enter().append('text')
+  .attr('x', d => {
+    return xCenter + boxSize/2;
+  })
+  .attr('y', d => {
+    yCenter += boxSize * 1.5;
+    return yCenter;
+  })
+  .attr('dy', d => {
+    // dy += 2;
+    return dy;
+  })
+  .text(d => {
+    return `${d.radius} victims`
   });
 }
 
