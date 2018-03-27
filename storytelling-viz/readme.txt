@@ -1,4 +1,5 @@
 Sources:
+  -	Online visualization: https://zpolsky.github.io/storytelling-viz/ 
   - Article: http://www.latimes.com/opinion/op-ed/la-oe-duwe-rocque-mass-shootings-mental-illness-20180223-story.html
   - Dataset: https://www.kaggle.com/zusmani/us-mass-shootings-last-50-years/data
   - US Map: adapted from http://bl.ocks.org/michellechandra/0b2ce4923dc9b5809922
