@@ -439,10 +439,10 @@ function createLegend(healthArray, pieDiv, svg) {
   });
 
   pieDiv.append('h4')
-    .html(`Health Legend`)
+    .html(`Mental Health Legend`)
     .style('position', 'absolute')
     .style('top', '375px')
-    .style('left', '85px');
+    .style('left', '55px');
 
   svg.append('h4')
     .html('Map Legend')
@@ -470,10 +470,10 @@ function createLegend(healthArray, pieDiv, svg) {
   ];
 
   mapLegend.append('text')
-    .attr('x', 25)
+    .attr('x', 0)
     .attr('y', 50)
-    .style('font-size', '18px')
-    .text('Map Legend')
+    .style('font-size', '16px')
+    .text('Shooter Gender Legend')
 
 
   yBox = 70;
